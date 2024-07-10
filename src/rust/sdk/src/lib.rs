@@ -325,7 +325,7 @@ impl EconiaClient {
         &mut self,
         payload: &EntryFunction,
     ) -> EconiaResult<EconiaTransaction> {
-        //let addr = self.user_account.address();
+        let addr = self.user_account.address();
         //println!("addr={addr}");
         let tx = TransactionFactory::new(self.chain_id)
             .entry_function(payload.clone())

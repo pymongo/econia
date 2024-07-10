@@ -24,6 +24,7 @@ pub trait FeedFromEventsAndPrevState {
     fn update<'a>(&mut self, events: impl Iterator<Item = &'a Event>);
 }
 
+#[allow(dead_code)]
 pub trait FeedFromEvents {
     fn new() -> Self;
     fn update(&mut self, events: &Vec<Event>);

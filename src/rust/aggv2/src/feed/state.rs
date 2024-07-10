@@ -34,6 +34,7 @@ pub struct LimitOrder {
     pub last_changed: BlockStamp,
     pub user: String,
     pub custodian_id: BigDecimal,
+    #[allow(dead_code)]
     pub direction: Direction,
     pub integrator: String,
     pub price: Price,

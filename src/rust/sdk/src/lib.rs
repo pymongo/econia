@@ -325,15 +325,23 @@ impl EconiaClient {
         &mut self,
         payload: &EntryFunction,
     ) -> EconiaResult<EconiaTransaction> {
-        let addr = self.user_account.address();
+        //let addr = self.user_account.address();
+        //println!("addr={addr}");
         let tx = TransactionFactory::new(self.chain_id)
             .entry_function(payload.clone())
             .sender(addr)
             .sequence_number(self.user_account.sequence_number())
-            .max_gas_amount(self.config.max_gas_amount)
+            .gas_unit_price(100)
+            .max_gas_amount(87810)
             .build();
 
+        // dbg!(&self.user_account);
+        // https://aptos.dev/en/build/sdks/ts-sdk/building-transactions/sponsoring-transactions#common-errors
         let signed_tx = self.user_account.sign_transaction(tx);
+        // let signed_tx = self.user_account.sign_fee_payer_with_transaction_builder(vec![&self.user_account],&self.user_account,tx);
+        // let response = self.aptos_client.submit_and_wait(&signed_tx).await.unwrap();
+        // println!("{response:?}");
+        // todo!();
         let pending = match self.aptos_client.submit(&signed_tx).await {
             Ok(res) => res.into_inner(),
             Err(RestError::Api(a)) => {
@@ -384,14 +392,18 @@ impl EconiaClient {
     ///
     /// * `entry` - `EntryFunction` to be submitted as part of the transaction to the blockchain.
     pub async fn submit_tx(&mut self, entry: EntryFunction) -> EconiaResult<EconiaTransaction> {
-        for i in 0..(self.config.retry_count) {
-            match self.submit_tx_internal(&entry).await {
-                Ok(lt) => return Ok(lt),
-                Err(e) if i == SUBMIT_ATTEMPTS - 1 => return Err(e),
-                _ => continue,
-            }
-        }
-        Err(EconiaError::FailedSubmittingTransaction)
+        self.submit_tx_internal(&entry).await
+        // for i in 0..(self.config.retry_count) {
+        //     match self.submit_tx_internal(&entry).await {
+        //         Ok(lt) => return Ok(lt),
+        //         Err(e) => {                    
+        //             println!("{e:?}");
+        //             break;
+        //         },
+        //         _ => continue,
+        //     }
+        // }
+        // Err(EconiaError::FailedSubmittingTransaction)
     }
 
     pub fn view_client(&self) -> EconiaViewClient {

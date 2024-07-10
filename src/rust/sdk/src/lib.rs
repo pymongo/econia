@@ -39,6 +39,7 @@ pub mod errors;
 pub mod view;
 
 pub use econia_types as types;
+pub use aptos_sdk;
 
 pub const SUBMIT_ATTEMPTS: u8 = 10;
 pub const MAX_GAS_AMOUNT: u64 = 1_000_000;

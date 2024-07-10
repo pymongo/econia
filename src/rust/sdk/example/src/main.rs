@@ -311,8 +311,68 @@ pub async fn report_best_price_levels(
     Ok(())
 }
 
+use aptos_sdk::crypto::ed25519::Ed25519PrivateKey;
+// use aptos_sdk::types::account_address::AccountAddress;
+pub fn get_private_key_and_addr() -> (Ed25519PrivateKey, AccountAddress) {
+    use serde::Deserialize;
+    #[derive(Deserialize)]
+    struct Config {
+        profiles: Profiles,
+    }
+    #[derive(Deserialize)]
+    struct Profiles {
+        default: DefaultProfile,
+    }
+    #[derive(Deserialize)]
+    struct DefaultProfile {
+        private_key: String,
+        // rest_url: String
+    }    
+    
+    let home = std::env::var("HOME").unwrap();
+    let yml_str = std::fs::read_to_string(format!("{home}/.aptos/config.yaml")).unwrap();
+    let config: Config = serde_yml::from_str(&yml_str).unwrap();
+    let private_key = config.profiles.default.private_key;
+
+    let private_key = <Ed25519PrivateKey as aptos_sdk::crypto::ValidCryptoMaterialStringExt>::from_encoded_string(&private_key).unwrap();
+    let public_key = aptos_sdk::crypto::SigningKey::verifying_key(&private_key);
+    let address = aptos_pubkey_to_addr(public_key.to_bytes());
+    (private_key, address)
+}
+fn aptos_pubkey_to_addr(pubkey: [u8; 32]) -> AccountAddress {
+    let mut pub_key = pubkey.to_vec();
+    pub_key.push(0);
+    use sha3::Digest;
+    let mut hasher = sha3::Sha3_256::new();
+    hasher.update(pub_key);
+    let digest = hasher.finalize();
+    AccountAddress::from_bytes(digest).unwrap()
+}
+
+#[allow(unreachable_code)]
 #[tokio::main]
 async fn main() -> EconiaResult<()> {
+    let (private_key, addr) = get_private_key_and_addr();
+    let client = aptos_sdk::rest_client::Client::new(aptos_sdk::rest_client::AptosBaseUrl::Mainnet.to_url());
+    let (acc, _state) = client.get_account(addr).await.unwrap().into_parts();
+    let sequence_number = acc.sequence_number;
+    let acc = LocalAccount::new(addr, private_key, sequence_number);
+
+    let econia_address: AccountAddress = "0xc0deb00c405f84c85dc13442e305df75d1288100cdd82675695f6148c7ece51c".parse().unwrap();
+    let econia_client = EconiaClient::connect(
+        reqwest::Url::parse("https://fullnode.mainnet.aptoslabs.com").unwrap(),
+        None,
+        econia_address.clone(),
+        acc,
+        None,
+    )
+    .await
+    .unwrap();
+    let r = econia_client.view_client().get_price_levels(7, 1, 1).await.unwrap();
+    dbg!(r);
+    // econia_client
+    dbg!(econia_client.view_client().get_market_counts().await.unwrap());
+return Ok(());
     let args = Args::parse();
 
     let Init {
